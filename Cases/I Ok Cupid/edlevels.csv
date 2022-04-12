@@ -1,0 +1,34 @@
+education,ed_category,ed_level
+high school,high school,2
+grad school,grad school,4
+working on college/university,high school,2
+working on space camp,middle school,1
+graduated from masters program,grad school,4
+graduated from college/university,under grad,3
+working on two-year college,high school,2
+graduated from high school,high school,2
+working on masters program,under grad,3
+graduated from space camp,middle school,1
+college/university,under grad,3
+dropped out of space camp,middle school,1
+graduated from ph.d program,doctorate,5
+graduated from law school,grad school,4
+working on ph.d program,grad school,4
+two-year college,under grad,3
+graduated from two-year college,under grad,3
+working on med school,grad school,4
+dropped out of college/university,high school,2
+space camp,middle school,1
+graduated from med school,grad school,4
+dropped out of high school,middle school,1
+working on high school,middle school,1
+masters program,grad school,4
+dropped out of ph.d program,grad school,4
+dropped out of two-year college,high school,2
+dropped out of med school,under grad,3
+working on law school,under grad,3
+law school,grad school,4
+dropped out of masters program,under grad,3
+ph.d program,grad school,4
+dropped out of law school,under grad,3
+med school,grad school,4
