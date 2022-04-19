@@ -30,14 +30,14 @@ library(ggplot2)
 library(class)
 
 #Importing datafiles 
-setwd("C:/Users/mksharma/Harvard/Harvard_DataMining_Business_Student") #setting working  directory
+setwd("~/Users/manoj/Harvard Courses/Harvard_DataMining_Business_Student") #setting working  directory
 setwd("./Cases/II National City Bank/training") #setting working folder
 currentData   <- read.csv('CurrentCustomerMktgResults.csv')
 vehicleData <- read.csv('householdVehicleData.csv') 
 axiomData <- read.csv('householdAxiomData.csv')
 creditData <- read.csv('householdCreditData.csv')
 carInsurance_test<-read.csv('carInsurance_test.csv')
-setwd("C:/Users/mksharma/Harvard/Harvard_DataMining_Business_Student")
+setwd("~/Users/manoj/Harvard Courses/Harvard_DataMining_Business_Student")
 setwd("./Cases/II National City Bank")
 inputProspect<-read.csv('prospectiveCustomers.csv') #importing prospect data, for eventual prediction 
 

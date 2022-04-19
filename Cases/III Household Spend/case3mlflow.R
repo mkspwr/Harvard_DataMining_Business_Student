@@ -6,6 +6,9 @@ library(mlflow)
 
 treatedTrain <- training
 treatedTest <- testing
+mlflow_set_experiment(
+  experiment_name='manoj'
+)
 
 control <- trainControl(method="adaptive_cv", number=9, verboseIter = TRUE,allowParallel = TRUE)
 metric <- "Accuracy"

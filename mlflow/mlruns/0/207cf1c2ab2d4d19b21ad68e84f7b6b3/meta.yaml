@@ -1,0 +1,15 @@
+artifact_uri: /home/rstudio/Users/manoj/Harvard Courses/Harvard_DataMining_Business_Student/mlflow/mlruns/0/207cf1c2ab2d4d19b21ad68e84f7b6b3/artifacts
+end_time: 1650169452859
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+name: ''
+run_id: 207cf1c2ab2d4d19b21ad68e84f7b6b3
+run_uuid: 207cf1c2ab2d4d19b21ad68e84f7b6b3
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1650169448518
+status: 3
+tags: []
+user_id: rstudio
