@@ -16,8 +16,11 @@ library(mlflow)
 library(readr)
 library(dplyr)
 library(caretEnsemble)
-library(ROSE)
-library(SuperLearner)
+library(skimr)
+library(igraph)
+library(DataExplorer)
+
+
 
 # Get the files
 trainingFiles <- list.files(pattern = '_training')
@@ -43,6 +46,9 @@ trainingTablesSectionB <- trainingTables[-idx,]
 glimpse(trainingTables)
 summary(trainingTables)
 str(trainingTables)
+plot_missing(trainingTables)
+
+
 
 #PLot correlations
 ################
@@ -60,8 +66,10 @@ barplot(table(trainingTablesSectionA$NetWorth), las = 2)
 
 myname<-"manoj"
 
-features<-"4:26,43,44,53:58,60:80"
-informativeFeatures <- names(trainingTablesSectionA)[c(4:26,43,44,53:58,60:80)]
+features<-names(trainingTablesSectionA[c(2:40,43:44,53:58,60:80)])
+
+informativeFeatures <- features
+features<-paste(features, collapse="|")
 
 
 plan  <- designTreatmentsN(trainingTablesSectionA, 
@@ -85,70 +93,96 @@ test_y <- testing[, "yHat"]
 validation_x <- as.matrix(validation[, !(names(train) == "yHat")])
 validation_y <- validation[, "yHat"]
 
-mlflow_set_experiment(
-  experiment_name = "Case-III",
 
+mlf_experiment_id = mlflow_set_experiment(
+  experiment_name = "Case-III Run 11"
 )
-features <- mlflow_param("features", 0.15, "string")
+
+
+
+features_p <- mlflow_param("features", features, "string")
 alpha <- mlflow_param("alpha", 0.15, "numeric")
 lambda <- mlflow_param("lambda", 0.45, "numeric")
-#mlinformativeFeatures <-mlflow_param("informativeFeatures",as.character(informativeFeatures),"string")
+run_name<-mlflow_param("name","model_name","string")
 
 
-#trying superlearner &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-sampled <- sample(1:nrow(train), 0.15 * nrow(train))
-sltrain <- train[sampled, ]
-sltest <- train[-sampled, ]
-sltrain_x <- sltrain[, !(names(train) == "yHat")]
-sltrain_y <- sltrain[, "yHat"]
+#trying caretEnsemble &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+# sampled <- sample(1:nrow(train), 0.15 * nrow(train))
+# sltrain <- train[sampled, ]
+# sltest <- train[-sampled, ]
+# sltrain_x <- sltrain[, !(names(train) == "yHat")]
+# sltrain_y <- sltrain[, "yHat"]
+# 
+# 
+# # NOT RUN {
+# set.seed(42)
+# models <- caretList(iris[1:50,1:2], iris[1:50,3], methodList=c("glm", "lm"))
+# ens <- caretEnsemble(models)
+# summary(ens)
+# # }
+# 
+# obj <- featurePlot(x=trainingTables[,c("Gender")],
+#                    y = trainingTables$yHat,
+#                    plot="box")
+# plot(obj)
 
-# Review code for corP, which is based on univariate correlation.
-screen.corP
+#trying caretEnsemble &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
-set.seed(1)
-
-# Fit the SuperLearner.
-# We need to use list() instead of c().
-cv_sl = CV.SuperLearner(Y = sltrain_y, X = sltrain_x, family = gaussian(),
-                        # For a real analysis we would use V = 10.
-                        cvControl = list(V = 10),
-                        parallel = "multicore",
-                        SL.library = list("SL.mean", "SL.glmnet","SL.ranger", "SL.xgboost", "SL.gbm","SL.randomForest", c("SL.glmnet", "screen.corP","screen.randomForest")))
-summary(cv_sl)
-
-
-#sl = SuperLearner(Y = sltrain_y, X = sltrain_x, family = gaussian(),parallel = "multicore",
-#                  SL.library = c("SL.mean", "SL.glmnet","SL.ranger", "SL.xgboost", "SL.gbm"))
-#sl
-
-#trying superlearner&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-
-with(mlflow_start_run(), {
+mlflow_start_run() 
   
   #######################################################test###########################
-  model <- glmnet(train_x, train_y, alpha = alpha, lambda = lambda, family= "gaussian", standardize = FALSE)
+  mlflow_log_param("alpha", alpha)
+  mlflow_log_param("lambda", lambda)
+  mlflow_log_param("run_name", "glmnet-mgaussian")
+  mlflow_log_param("features_p", features)
+  model <- glmnet(train_x, train_y, alpha = alpha, lambda = lambda, family= "mgaussian", standardize = FALSE)
   predictor <- crate(~ glmnet::predict.glmnet(!!model, as.matrix(.x)), !!model)
-  predicted <- predictor(test_x)
   
-  rmse <- sqrt(mean((predicted - test_y) ^ 2))
-  mae <- mean(abs(predicted - test_y))
-  r2 <- as.numeric(cor(predicted, test_y) ^ 2)
+  testingPreds <- predictor(test_x)
+  validationPreds <- predictor(validation_x)
+  trainPreds    <- predictor(train_x)
+  
+  #Evaluating performance on testing data
+  rmse <- sqrt(mean((testingPreds - test_y) ^ 2))
+  mae <- mean(abs(testingPreds - test_y))
+  r2 <- as.numeric(cor(testingPreds, test_y) ^ 2)
+  
+  mlflow_log_metric("rmse-testing", rmse)
+  mlflow_log_metric("r2-testing", r2)
+  mlflow_log_metric("mae-testing", mae)
+  
+  #Evaluating performance on training data
+  rmse <- sqrt(mean((trainPreds - train_y) ^ 2))
+  mae <- mean(abs(trainPreds - train_y))
+  r2 <- as.numeric(cor(trainPreds, train_y) ^ 2)
+  
+  mlflow_log_metric("rmse-Train", rmse)
+  mlflow_log_metric("r2-Train", r2)
+  mlflow_log_metric("mae-Train", mae)
+  
+  #Evaluating performance on validation data
+  rmse <- sqrt(mean((validationPreds - validation_y) ^ 2))
+  mae <- mean(abs(validationPreds - validation_y))
+  r2 <- as.numeric(cor(validationPreds, validation_y) ^ 2)
+  
+  mlflow_log_metric("rmse-Validation", rmse)
+  mlflow_log_metric("r2-Validation", r2)
+  mlflow_log_metric("mae-Validation", mae)
   
   message("Elasticnet model (alpha=", alpha, ", lambda=", lambda, "):")
   message("  RMSE: ", rmse)
   message("  MAE: ", mae)
   message("  R2: ", r2)
   
-  #mlflow_log_param("informativeFeatures", mlinformativeFeatures)
-  
-  mlflow_log_param("alpha", alpha)
-  mlflow_log_param("lambda", lambda)
-  mlflow_log_metric("rmse-glmnet", rmse)
-  mlflow_log_metric("r2-glmnet", r2)
-  mlflow_log_metric("mae-glmnet", mae)
-  
   mlflow_log_model(predictor, "model")
-  
+
+
+mlflow_end_run()
+
+mlflow_start_run() 
+  mlflow_log_param("run_name","lm")
+  mlflow_log_param("features_p", features)
+
   #lm
   fitLM <- lm(yHat ~ ., train)
   
@@ -168,72 +202,77 @@ with(mlflow_start_run(), {
   mae <- mean(abs(trainPreds - train_y))
   r2 <- as.numeric(cor(trainPreds, train_y) ^ 2)
   
-  mlflow_log_metric("rmse-lm - Train", rmse)
-  mlflow_log_metric("r2-lm - Train", r2)
-  mlflow_log_metric("mae-lm - Train", mae)
+  mlflow_log_metric("rmse-Train", rmse)
+  mlflow_log_metric("r2-Train", r2)
+  mlflow_log_metric("mae-Train", mae)
   
   #Evaluating performance on validation data
   rmse <- sqrt(mean((validationPreds - validation_y) ^ 2))
   mae <- mean(abs(validationPreds - validation_y))
   r2 <- as.numeric(cor(validationPreds, validation_y) ^ 2)
   
-  mlflow_log_metric("rmse-lm - Validation", rmse)
-  mlflow_log_metric("r2-lm - Validation", r2)
-  mlflow_log_metric("mae-lm - Validation", mae)
+  mlflow_log_metric("rmse-Validation", rmse)
+  mlflow_log_metric("r2-Validation", r2)
+  mlflow_log_metric("mae-Validation", mae)
   
   #Evaluating performance on testing data
   rmse <- sqrt(mean((testingPreds - test_y) ^ 2))
   mae <- mean(abs(testingPreds - test_y))
   r2 <- as.numeric(cor(testingPreds, test_y) ^ 2)
   
-  mlflow_log_metric("rmse-lm - testing", rmse)
-  mlflow_log_metric("r2-lm - testing", r2)
-  mlflow_log_metric("mae-lm - testing", mae)
-  
+  mlflow_log_metric("rmse-testing", rmse)
+  mlflow_log_metric("r2-testing", r2)
+  mlflow_log_metric("mae-testing", mae)
+
+
+mlflow_end_run()
+
+mlflow_start_run() 
   #RandomForest
-  predictorrf <- randomForest(yHat ~ ., data = train, mtry = 3,
-                              importance = TRUE, na.action = na.omit)
+  mlflow_log_param("run_name", "randomforest")
+  mlflow_log_param("features_p", features)
+  predictorrf <- randomForest(yHat ~ ., data = train, mtry = 10,ntree=10,maxnodes=4,
+                              importance = TRUE, na.action = na.omit, proximity=TRUE,sampsize=c(20, 30, 20))
   
   print(predictorrf)
   trainPreds      <- predict(predictorrf, train)
   validationPreds <- predict(predictorrf, validation)
   testingPreds    <- predict(predictorrf, testing)
-  
   #Evaluating performance on training data
   rmse <- sqrt(mean((trainPreds - train_y) ^ 2))
   mae <- mean(abs(trainPreds - train_y))
   r2 <- as.numeric(cor(trainPreds, train_y) ^ 2)
   
-  mlflow_log_metric("rmse-RF - Train", rmse)
-  mlflow_log_metric("r2-RF - Train", r2)
-  mlflow_log_metric("mae-RF - Train", mae)
+  mlflow_log_metric("rmse-Train", rmse)
+  mlflow_log_metric("r2-Train", r2)
+  mlflow_log_metric("mae-Train", mae)
   
   #Evaluating performance on validation data
   rmse <- sqrt(mean((validationPreds - validation_y) ^ 2))
   mae <- mean(abs(validationPreds - validation_y))
   r2 <- as.numeric(cor(validationPreds, validation_y) ^ 2)
   
-  mlflow_log_metric("rmse-RF - Validation", rmse)
-  mlflow_log_metric("r2-RF  - Validation", r2)
-  mlflow_log_metric("mae-RF - Validation", mae)
+  mlflow_log_metric("rmse-Validation", rmse)
+  mlflow_log_metric("r2-Validation", r2)
+  mlflow_log_metric("mae-Validation", mae)
   
   #Evaluating performance on testing data
   rmse <- sqrt(mean((testingPreds - test_y) ^ 2))
   mae <- mean(abs(testingPreds - test_y))
   r2 <- as.numeric(cor(testingPreds, test_y) ^ 2)
   
+  mlflow_log_metric("rmse-testing", rmse)
+  mlflow_log_metric("r2-testing", r2)
+  mlflow_log_metric("mae-testing", mae)
+  
   message("Random Forest model (mtry=", 3, ", importance=", "true", "):")
   message("  RMSE: ", rmse)
   message("  MAE: ", mae)
   message("  R2: ", r2)
-  
-  mlflow_log_metric("rmse-RF - testing", rmse)
-  mlflow_log_metric("r2-RF  - testing", r2)
-  mlflow_log_metric("mae-RF - testing", mae)
   #######################################################test###########################
-})
 
-mlflow_set_tracking_uri("http://localhost:5733")
+
+#mlflow_set_tracking_uri("http://localhost:5712")
 mlflow_end_run()
 #mlflow_ui()
 

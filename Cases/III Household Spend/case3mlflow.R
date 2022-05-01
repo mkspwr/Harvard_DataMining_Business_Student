@@ -1,40 +1,33 @@
-
-
-Sys.setenv(MLFLOW_PYTHON_BIN="C:\\Users\\mksharma\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.9_qbz5n2kfra8p0\\python.exe")
-
 library(mlflow)
 
-treatedTrain <- training
-treatedTest <- testing
+
 mlflow_set_experiment(
-  experiment_name='manoj'
+  experiment_name = "Run 9"
 )
+features = "asdfasdfcmks"
+mlflow_set_experiment_tag(key="features",value=features)
 
-control <- trainControl(method="adaptive_cv", number=9, verboseIter = TRUE,allowParallel = TRUE)
-metric <- "Accuracy"
+features <- mlflow_param("features", 0.15, "string")
+alpha <- mlflow_param("alpha", 0.15, "numeric")
+lambda <- mlflow_param("lambda", 0.45, "numeric")
+run_name<-mlflow_param("name","model_name","string")
+mlflow_start_run() 
+for (mtry in 1:10) {
 
-with(mlflow_start_run(), {
-  mlflow_set_tag("mlflow.runName", "randomForest")
-  fit <- train(as.factor(Y_AcceptedOffer) ~ ., data=treatedTrain, method="rf", metric=metric, trControl=control) 
+  #mlflow_start_run() 
+  mlflow_log_param("alpha", alpha)
+  mlflow_log_param("lambda", lambda)
+  mlflow_log_param("run_name", "glmnet")
+  mlflow_log_param("features","sdfasdf|asdfasdf |asdfaff |asdfsadf |asdfsadfa|asdfsafd")
   
-  jpeg(filename="1.jpeg")
-  print(plot(fit))
-  dev.off()
-  # Save the plot and log it as an artifact
-  mlflow_log_artifact("1.jpeg") 
-  accu_train <- get_accuracy(fit, treatedTrain)
-  accu_test <- get_accuracy(fit, treatedTest)
+  mlflow_log_metric("rmse-testing", 0.33)
+  mlflow_log_metric("r2-testing", 0.33)
+  mlflow_log_metric("mae-testing", 0.33)
+  mlflow_log_param("features","sdfasdf|asdfasdf |asdfaff |asdfsadf |asdfsadfa|asdfsafd")
   
-  message("  accu_train: ", accu_train)
-  message("  accu_test: ", accu_test)
-  message("  splitPercent: ", splitPercent)
-  message("  seed: ", seed)
-  message("  device: ", getOption("device"))
-  mlflow_log_metric("accu_train", accu_train)
-  mlflow_log_metric("accu_test", accu_test)
-  mlflow_log_param("splitPercent", splitPercent)
-  mlflow_log_param("seed", seed)
-  mlflow_log_param("method", "adaptive_cv")
-  mlflow_log_param("number", "9")
+ # mlflow_end_run()
   
-})
+}
+mlflow_end_run()
+
+
