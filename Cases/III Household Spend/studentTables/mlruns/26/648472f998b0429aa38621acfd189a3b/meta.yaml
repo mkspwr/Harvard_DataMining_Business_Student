@@ -1,0 +1,16 @@
+artifact_uri: /home/rstudio/Users/manoj/Harvard Courses/Harvard_DataMining_Business_Student/Cases/III
+  Household Spend/studentTables/mlruns/26/648472f998b0429aa38621acfd189a3b/artifacts
+end_time: 1651456867756
+entry_point_name: ''
+experiment_id: '26'
+lifecycle_stage: active
+name: ''
+run_id: 648472f998b0429aa38621acfd189a3b
+run_uuid: 648472f998b0429aa38621acfd189a3b
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1651456844987
+status: 3
+tags: []
+user_id: rstudio

@@ -61,7 +61,7 @@ trainingNA[trainingNA == "Cannot Determine"] <- NA
 # Replace blank by NA
 plot_missing(trainingNA)
 
-dfmissing<-colSums(is.na(trainingNA))
+
 
 #looking at count of mising values and using this to eliminate variables which have most values missing
 #for eg - DonatestoLiberalCauses - 14921 out of 15000 are empty
@@ -79,6 +79,30 @@ barplot(table(trainingTablesSectionA$NetWorth), las = 2)
 
 ## Modify 
 # Choose which variables are ethical to use, and others which may not be useful; here I just chose 5 variables
+#adding a cardinal variable for bookbuyer
+#training
+trainingTablesSectionA$bookbuyerlevel <- gsub(' book purchase in home', '', trainingTablesSectionA$BookBuyerInHome)
+trainingTablesSectionA$bookbuyerlevel <- gsub('book purchases in home', '', trainingTablesSectionA$bookbuyerlevel)
+trainingTablesSectionA$bookbuyerlevel[trainingTablesSectionA$bookbuyerlevel == ""] <- "0"
+trainingTablesSectionA$bookbuyerlevel<-as.numeric(trainingTablesSectionA$bookbuyerlevel)
+#validation
+trainingTablesSectionB$bookbuyerlevel <- gsub(' book purchase in home', '', trainingTablesSectionB$BookBuyerInHome)
+trainingTablesSectionB$bookbuyerlevel <- gsub('book purchases in home', '', trainingTablesSectionB$bookbuyerlevel)
+trainingTablesSectionB$bookbuyerlevel[trainingTablesSectionB$bookbuyerlevel == ""] <- "0"
+trainingTablesSectionB$bookbuyerlevel<-as.numeric(trainingTablesSectionB$bookbuyerlevel)
+#testing
+testingTables$bookbuyerlevel <- gsub(' book purchase in home', '', testingTables$BookBuyerInHome)
+testingTables$bookbuyerlevel <- gsub('book purchases in home', '', testingTables$bookbuyerlevel)
+testingTables$bookbuyerlevel[testingTables$bookbuyerlevel == ""] <- "0"
+testingTables$bookbuyerlevel<-as.numeric(testingTables$bookbuyerlevel)
+#Prospect
+
+prospectTables$bookbuyerlevel <- gsub(' book purchase in home', '', prospectTables$BookBuyerInHome)
+prospectTables$bookbuyerlevel <- gsub('book purchases in home', '', prospectTables$bookbuyerlevel)
+prospectTables$bookbuyerlevel[prospectTables$bookbuyerlevel == ""] <- "0"
+prospectTables$bookbuyerlevel<-as.numeric(prospectTables$bookbuyerlevel)
+
+trainingTablesSectionA$bookbuyerlevel<-as.numeric(trainingTablesSectionA$bookbuyerlevel)
 
 myname<-"manoj"
 
@@ -105,10 +129,35 @@ features<-c('PartiesDescription','storeVisitFrequency','state',
                                         'DonatesToCharityInHome',
                                         'Investor',
                                         'OccupationIndustry',
-                                        'BookBuyerInHome',
+                                        'bookbuyerlevel',
                                         'DonatestoLocalCommunity',
                                         'HealthFitnessMagazineInHome',
-                                        'GeneralCollectorInHome')
+                                        'GeneralCollectorInHousehold',
+                                        'PoliticalContributerInHome',
+                                        'FamilyMagazineInHome',
+                                        'DonatestoHealthcare1',
+                                        'InterestinCurrentAffairsPoliticsInHousehold',
+                                        'MosaicZ4',
+                                        'BuyerofArtinHousehold',
+                                        'GunOwner',
+                                        'HomeOffice',
+                                        'OtherPetOwner',
+                                        'DogOwner',
+                                        'FinancialMagazineInHome',
+                                        'ReligiousContributorInHome',
+                                        'DonatestoWildlifePreservation',
+                                        'DoItYourselfMagazineInHome',
+                                        'CatOwner',
+                                        'LikelyUnionMember',
+                                        'DonatestoChildrensCauses',
+                                        'GardeningMagazineInHome',
+                                        'DonatestoAnimalWelfare',
+                                        'DonatesEnvironmentCauseInHome',
+                                        'FemaleOrientedMagazineInHome',
+                                        'Veteran',
+                                        'CulinaryInterestMagazineInHome',
+                                        'DonatestoVeteransCauses',
+                                        'UpscaleBuyerInHome')
 #Iteration # 2, adding few more variables to see if it improves scores, earlier scores were from 92 to 112 (RMSE)
 
 
@@ -138,32 +187,48 @@ validation_x <- as.matrix(validation[, !(names(train) == "yHat")])
 validation_y <- validation[, "yHat"]
 
 
+mtry=10
+ntrees = 500
+
+#Running RandomForest using Ranger and checking the results
+rangerrf <- ranger(yHat ~.,data = train, num.trees = ntrees, mtry = mtry)
+#print(predictorrf)
+trainPreds      <- predict(rangerrf, train)
+validationPreds <- predict(rangerrf, validation)
+testingPreds    <- predict(rangerrf, testing)
+
+rangerrf
+#checking the results only Validation data
+rmse <- MLmetrics::RMSE(validationPreds$predictions,validation_y)
+mae <- MLmetrics::MAE(validationPreds$predictions,validation_y)
+r2 <- MLmetrics::R2_Score(validationPreds$predictions,validation_y)
+message("Random Forest - Ranger - Validation (mtry=", mtry, ", ntree=", ntrees,    "):")
+message("  RMSE: ", rmse)
+message("  MAE: ", mae)
+message("  R2: ", r2)
+
+#checking the results for Testing data
+rmse <- MLmetrics::RMSE(testingPreds$predictions,test_y)
+mae <- MLmetrics::MAE(testingPreds$predictions,test_y)
+r2 <- MLmetrics::R2_Score(testingPreds$predictions,test_y)
+message("Random Forest - Ranger - Testing (mtry=", mtry, ", ntree=", ntrees,    "):")
+message("  RMSE: ", rmse)
+message("  MAE: ", mae)
+message("  R2: ", r2)
+
+
 mlf_experiment_id = mlflow_set_experiment(
-  experiment_name = "RandomForest-loop3"
+  experiment_name = "Ranger-loop3"
 )
 
 
-
+#setting default values for the MLFlow Parameters
 features_p <- mlflow_param("features", features, "string")
 mtry <- mlflow_param("mtry", 3, "numeric")
 ntree <- mlflow_param("ntree", 3, "numeric")
 maxnodes<- mlflow_param("maxnodes", 4, "numeric")
 
 
-rangerrf <- ranger(yHat ~.,data = train, num.trees = 500, mtry = 3)
-MLmetrics::RMSE(testingPreds$predictions,testing$yHat)
-rangerrf
-
-#print(predictorrf)
-trainPreds      <- predict(rangerrf, train)
-validationPreds <- predict(rangerrf, validation)
-testingPreds    <- predict(rangerrf, testing)
-
-
-
-rmse <- MLmetrics::RMSE(testingPreds$predictions,test_y)
-mae <- MLmetrics::MAE(testingPreds$predictions,test_y)
-r2 <- MLmetrics::R2_Score(testingPreds$predictions,test_y)
 
 
 
@@ -172,8 +237,8 @@ r2 <- MLmetrics::R2_Score(testingPreds$predictions,test_y)
 
 #RandomForest
 for (mtry in 3:4) {
-  for (ntree in c(seq(from = 50, to = 600, by  = 50))){
-    for (maxnodes in 4:18){
+  for (ntree in c(seq(from = 50, to = 600, by  = 200))){
+    for (maxnodes in 4:5){
       mlflow_start_run()
       mlflow_log_param("run_name", "randomforest")
       mlflow_log_param("features_p", features)
@@ -181,7 +246,7 @@ for (mtry in 3:4) {
       mlflow_log_param("ntree", ntree)
       mlflow_log_param("maxnodes", maxnodes)
       
-      predictorrf <- ranger(yHat ~.,data = train, num.trees = ntree, mtry = 3)
+      predictorrf <- ranger(yHat ~.,data = train, num.trees = ntree, mtry = mtry, maxnodes = maxnodes)
       MLmetrics::RMSE(testingPreds$predictions,testing$yHat)
       
       #print(predictorrf)
@@ -216,7 +281,7 @@ for (mtry in 3:4) {
       mlflow_log_metric("r2-testing", r2)
       mlflow_log_metric("mae-testing", mae)
       
-      message("Random Forest model (mtry=", 3, ", importance=", "true", "):")
+      message("Random Forest model (mtry=", mtry, ", ntree=", ntree,  "maxnodes = ", maxnodes , "):")
       message("  RMSE: ", rmse)
       message("  MAE: ", mae)
       message("  R2: ", r2)

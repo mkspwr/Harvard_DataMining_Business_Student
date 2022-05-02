@@ -65,8 +65,83 @@ barplot(table(trainingTablesSectionA$NetWorth), las = 2)
 # Choose which variables are ethical to use, and others which may not be useful; here I just chose 5 variables
 
 myname<-"manoj"
+#adding a cardinal variable for bookbuyer
+#training
+trainingTablesSectionA$bookbuyerlevel <- gsub(' book purchase in home', '', trainingTablesSectionA$BookBuyerInHome)
+trainingTablesSectionA$bookbuyerlevel <- gsub('book purchases in home', '', trainingTablesSectionA$bookbuyerlevel)
+trainingTablesSectionA$bookbuyerlevel[trainingTablesSectionA$bookbuyerlevel == ""] <- "0"
+trainingTablesSectionA$bookbuyerlevel<-as.numeric(trainingTablesSectionA$bookbuyerlevel)
+#validation
+trainingTablesSectionB$bookbuyerlevel <- gsub(' book purchase in home', '', trainingTablesSectionB$BookBuyerInHome)
+trainingTablesSectionB$bookbuyerlevel <- gsub('book purchases in home', '', trainingTablesSectionB$bookbuyerlevel)
+trainingTablesSectionB$bookbuyerlevel[trainingTablesSectionB$bookbuyerlevel == ""] <- "0"
+trainingTablesSectionB$bookbuyerlevel<-as.numeric(trainingTablesSectionB$bookbuyerlevel)
+#testing
+testingTables$bookbuyerlevel <- gsub(' book purchase in home', '', testingTables$BookBuyerInHome)
+testingTables$bookbuyerlevel <- gsub('book purchases in home', '', testingTables$bookbuyerlevel)
+testingTables$bookbuyerlevel[testingTables$bookbuyerlevel == ""] <- "0"
+testingTables$bookbuyerlevel<-as.numeric(testingTables$bookbuyerlevel)
+#Prospect
 
-features<-names(trainingTablesSectionA[c(2:40,43:44,53:58,60:80)])
+prospectTables$bookbuyerlevel <- gsub(' book purchase in home', '', prospectTables$BookBuyerInHome)
+prospectTables$bookbuyerlevel <- gsub('book purchases in home', '', prospectTables$bookbuyerlevel)
+prospectTables$bookbuyerlevel[prospectTables$bookbuyerlevel == ""] <- "0"
+prospectTables$bookbuyerlevel<-as.numeric(prospectTables$bookbuyerlevel)
+
+
+#features<-names(trainingTablesSectionA[c(2:40,43:44,53:58,60:80)])
+features<-c('PartiesDescription','storeVisitFrequency','state',
+            'city',
+            'county',
+            'ResidenceHHGenderDescription',
+            'Gender',
+            'Age',
+            'EstHomeValue',
+            'MedianEducationYears',
+            'ISPSA',
+            'PropertyType',
+            'HomeOwnerRenter',
+            'BroadEthnicGroupings',
+            'EthnicDescription',
+            'PresenceOfChildrenCode',
+            'DwellingUnitSize',
+            'Education',
+            'NetWorth',
+            'ComputerOwnerInHome',
+            'LandValue',
+            'ReligionsDescription',
+            'DonatesToCharityInHome',
+            'Investor',
+            'OccupationIndustry',
+            'bookbuyerlevel',
+            'DonatestoLocalCommunity',
+            'HealthFitnessMagazineInHome',
+            'GeneralCollectorInHousehold',
+            'PoliticalContributerInHome',
+            'FamilyMagazineInHome',
+            'DonatestoHealthcare1',
+            'InterestinCurrentAffairsPoliticsInHousehold',
+            'MosaicZ4',
+            'BuyerofArtinHousehold',
+            'GunOwner',
+            'HomeOffice',
+            'OtherPetOwner',
+            'DogOwner',
+            'FinancialMagazineInHome',
+            'ReligiousContributorInHome',
+            'DonatestoWildlifePreservation',
+            'DoItYourselfMagazineInHome',
+            'CatOwner',
+            'LikelyUnionMember',
+            'DonatestoChildrensCauses',
+            'GardeningMagazineInHome',
+            'DonatestoAnimalWelfare',
+            'DonatesEnvironmentCauseInHome',
+            'FemaleOrientedMagazineInHome',
+            'Veteran',
+            'CulinaryInterestMagazineInHome',
+            'DonatestoVeteransCauses',
+            'UpscaleBuyerInHome')
 
 informativeFeatures <- features
 features<-paste(features, collapse="|")
@@ -95,7 +170,7 @@ validation_y <- validation[, "yHat"]
 
 
 mlf_experiment_id = mlflow_set_experiment(
-  experiment_name = "Case-III Run 11"
+  experiment_name = "Case-III Run May5#2"
 )
 
 
@@ -231,10 +306,10 @@ mlflow_start_run()
   #RandomForest
   mlflow_log_param("run_name", "randomforest")
   mlflow_log_param("features_p", features)
-  predictorrf <- randomForest(yHat ~ ., data = train, mtry = 10,ntree=10,maxnodes=4,
-                              importance = TRUE, na.action = na.omit, proximity=TRUE,sampsize=c(20, 30, 20))
+  predictorrf <- randomForest(yHat ~ ., data = train, mtry = 10,ntree=500,maxnodes=4,
+                              importance = TRUE, na.action = na.omit, proximity=TRUE)
   
-  print(predictorrf)
+  #print(predictorrf)
   trainPreds      <- predict(predictorrf, train)
   validationPreds <- predict(predictorrf, validation)
   testingPreds    <- predict(predictorrf, testing)
