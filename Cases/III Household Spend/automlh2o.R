@@ -1,7 +1,19 @@
+# Case-III Bed Bath and Yonder - CSCI E-96 - Data Mining for Business
+# 
+# Project Purpose: Building a predicted model for predicting Household spend (yHat) based on the data files available 
+# Provide data insights
+# Filename : automlh2o.R
+# This R script is solely for using h2o package, and has 3 sections. 
+# 1. AutoML using h2o
+# 2. DeepLearning using h2o
+# 3. Hyperparameter tuning for the DeepLearning 
+# 
+# Student name : Manoj Sharma
+#loading the h2o library
 library(h2o)
-h2o.init()
-#importing files
-
+h2o.init() #initiating the h2o engine.
+#h2o uses java in the background, and hence, the R library h2o library is used to call the h2o java module on the computer , acting as an interface
+#importing files into h2o frames
 training<-h2o.importFile(path="C:/Harvard/Harvard_DataMining_Business_Student/Cases/III Household Spend/studentTables/training.csv")
 testing<-h2o.importFile(path="C:/Harvard/Harvard_DataMining_Business_Student/Cases/III Household Spend/studentTables/testing.csv")
 h2o.head(training)
