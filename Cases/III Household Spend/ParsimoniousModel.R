@@ -1,8 +1,14 @@
-#' Case III Scaffold
-#' Ted Kwartler
-#' Apr 11 2022
+# Case-III Bed Bath and Yonder - CSCI E-96 - Data Mining for Business
+# 
+# Project Purpose: Building a predicted model for predicting Household spend (yHat) based on the data files available 
+# Provide data insights
+# Filename : ParsimoniousModel.R
+#   
+#
+# Student name : Manoj Sharma
 
 # Options & Set up
+
 setwd("~/Users/manoj/Harvard Courses/Harvard_DataMining_Business_Student/Cases/III Household Spend/studentTables")
 
 options(scipen=999)
@@ -44,7 +50,11 @@ testingTables <- join_all(testingTables, by = 'tmpID')
 prospectTables <- lapply(prospects, read.csv)
 prospectTables <- join_all(prospectTables, by = 'tmpID')
 
-## Sample
+########################################-SAMPLE-#################################################################
+## Sample is the first phase of SEMMA approach
+##
+########################################-SAMPLE-#################################################################
+
 #setting the seed as 1234 for reproducability
 set.seed(1234) 
 #creating a split of Training data into 2 sections, A and B, in order to train and validate the results
@@ -56,6 +66,20 @@ glimpse(trainingTables)
 #wow, this data has so many variables- 80 of them
 summary(trainingTables)
 str(trainingTables)
+
+
+
+
+#looking at count of mising values and using this to eliminate variables which have most values missing
+#for eg - DonatestoLiberalCauses - 14921 out of 15000 are empty
+
+
+########################################-EXPLORE-#################################################################
+## EXPLORE is the 2ND phase of SEMMA approach in which data is explored
+##
+########################################-EXPLORE-#################################################################
+names(trainingTablesSectionA)
+head(trainingTablesSectionA)
 plot_missing(trainingTables)
 #although plot missing doesn't show a lot of NAs, I notice that there are a lot of blanks in data
 trainingNA <- trainingTables                                    # Duplicate data frame
@@ -65,22 +89,6 @@ trainingNA[trainingNA == "Cannot Determine"] <- NA
 
 # Replace blank by NA
 plot_missing(trainingNA)
-
-
-
-#looking at count of mising values and using this to eliminate variables which have most values missing
-#for eg - DonatestoLiberalCauses - 14921 out of 15000 are empty
-
-#PLot correlations
-################
-
-
-#####
-
-## Explore -- do more exploration 
-names(trainingTablesSectionA)
-head(trainingTablesSectionA)
-
 #plotting yHat distribution in training and test sets
 hist(trainingTables$yHat,
      main="Distribution of yHat in training set",
@@ -103,7 +111,7 @@ ggplot(trainingTables, aes(Age, yHat)) +
 ggplot(testingTables, aes(Age, yHat)) +
   geom_jitter(size = 0.5, width = 0.5)
 
-
+#plotting yHat against storeVisitFrequency and Gender for training Data
 ggscatterhist(
   trainingTables[!(trainingTables$Gender==""),], x = "storeVisitFrequency", y = "yHat",
   color = "Gender", size = 3, alpha = 0.6,
@@ -112,13 +120,14 @@ ggscatterhist(
 )
 
 
+#plotting yHat against storeVisitFrequency and Gender for testing Data
 ggscatterhist(
   testingTables, x = "storeVisitFrequency", y = "yHat",
   color = "Gender", size = 3, alpha = 0.6,
   palette = c("#00AFBB", "#E7B800", "#FC4E07"),
   margin.params = list(fill = "Gender", color = "black", size = 0.2)
 )
-
+#plotting yHat against ISPSA  and Gender for training Data
 ggscatterhist(
   trainingTables[!(trainingTables$Gender==""),], x = "ISPSA", y = "yHat",
   color = "Gender", size = 3, alpha = 0.6,
@@ -135,7 +144,10 @@ ggplot(trainingTables[!(trainingTables$ResidenceHHGenderDescription==""),], aes(
 ggplot(trainingTables[!(trainingTables$Education==""),], aes(Education, yHat)) +
   geom_boxplot()
 
-## Modify 
+########################################-MODIFY-#################################################################
+## MODIFY is the 3RD phase of SEMMA approach in which data is mofified to be prepared for modeling
+##
+########################################-MODIFY-#################################################################
 # Choose which variables are ethical to use, and others which may not be useful; here I just chose 5 variables
 
 #adding a ordinal variable for bookbuyer
@@ -172,7 +184,7 @@ trainingTablesSectionA$bookbuyerlevel<-as.numeric(trainingTablesSectionA$bookbuy
 #                   '$100000-249999'=6,
 #                   '$250000-499999'=7,
 #                   '$499999+'=8,6)
-
+#adding a numerical variable for Education level for training data
 trainingTablesSectionA$EDlevel <- sapply(trainingTablesSectionA$Education, switch,
                   'Unknown' = 3,
                   'Less than HS Diploma - Likely' = 1,
@@ -187,6 +199,7 @@ trainingTablesSectionA$EDlevel <- sapply(trainingTablesSectionA$Education, switc
                   'Grad Degree - Extremely Likely'=10,5)
 trainingTablesSectionA$EDlevel<-as.numeric(trainingTablesSectionA$EDlevel)
 
+#adding a numerical variable for Education level for validation data
 trainingTablesSectionB$EDlevel <- sapply(trainingTablesSectionB$Education, switch,
                                          'Unknown' = 3,
                                          'Less than HS Diploma - Likely' = 1,
@@ -200,6 +213,8 @@ trainingTablesSectionB$EDlevel <- sapply(trainingTablesSectionB$Education, switc
                                          'Grad Degree - Likely'=9,
                                          'Grad Degree - Extremely Likely'=10,5)
 trainingTablesSectionB$EDlevel<-as.numeric(trainingTablesSectionB$EDlevel)
+
+#adding a numerical variable for Education level for testing data
 testingTables$EDlevel <- sapply(testingTables$Education, switch,
                                          'Unknown' = 3,
                                          'Less than HS Diploma - Likely' = 1,
@@ -213,6 +228,8 @@ testingTables$EDlevel <- sapply(testingTables$Education, switch,
                                          'Grad Degree - Likely'=9,
                                          'Grad Degree - Extremely Likely'=10,5)
 testingTables$EDlevel<-as.numeric(testingTables$EDlevel)
+
+#adding a numerical variable for Education level for prospect data
 prospectTables$EDlevel <- sapply(prospectTables$Education, switch,
                                 'Unknown' = 3,
                                 'Less than HS Diploma - Likely' = 1,
@@ -310,27 +327,31 @@ features_MidP<-c('PartiesDescription','storeVisitFrequency',
                'ComputerOwnerInHome',
                'LandValue',
                'ReligionsDescription')
-#Iteration # 2, adding few more variables to see if it improves scores, earlier scores were from 92 to 112 (RMSE)
 
 
+#providing the feature list to create a treatment plan. Preparing the features variable to be stored in ML Flow
 informativeFeatures <- most_features
 features<-paste(most_features, collapse="|")
 
-
+#creating treatment plan based on training data
 plan  <- designTreatmentsN(trainingTablesSectionA, 
                            informativeFeatures,
                            'yHat')
 
 print(informativeFeatures)
-# Prepare all sections of the data
+# Prepare all sections of the data, based on the treatment plan
 train      <- prepare(plan, trainingTablesSectionA)
 validation <- prepare(plan, trainingTablesSectionB)
 testing    <- prepare(plan, testingTables)
 prospects  <- prepare(plan, prospectTables)
 
-## Model(s)
+########################################-MODEL-#################################################################
+## MODEL is the 4TH phase of SEMMA approach in which  modeling is done
+## various models are tried, with different parameters
+## Hyperparameter tuning, feature selection is being done in this phase
+########################################-MODEL-#################################################################
 
-
+#preparing the data in the required form for trying into the models
 train_x <- as.matrix(train[, !(names(train) == "yHat")])
 test_x <- as.matrix(testing[, !(names(train) == "yHat")])
 train_y <- train[, "yHat"]
@@ -340,6 +361,8 @@ validation_y <- validation[, "yHat"]
 
 
 
+# The next few lines are created to execute grid search using Caret package. Upon running different grid searches using Caret and also
+# manually running such tuning of models, I decided on using the mtry of 18 and ntrees as 260
 
 # tgrid <- expand.grid(
 #   .mtry = 2:10,
@@ -375,17 +398,23 @@ validation_y <- validation[, "yHat"]
 # message("  RMSE: ", rmse)
 # message("  MAE: ", mae)
 # message("  R2: ", r2)
-mtry=10
-ntrees = 500
+
+#these values were found after running experimentation and grid searches
+mtry=18
+ntrees=260
+#setting up a new MLFlow experiment
 mlf_experiment_id = mlflow_set_experiment(
   experiment_name = "Parsimonious model-MostFeatures"
 )
 
-
+#starting the MLFlow run
 mlflow_start_run() 
   #Running RandomForest using Ranger and checking the results
   rangerrf <- ranger(yHat ~.,data = train, num.trees = ntrees, mtry = mtry)
   #print(predictorrf)
+
+    
+  #making predictions using the ranger (RandomForest) model
   trainPreds      <- predict(rangerrf, train)
   validationPreds <- predict(rangerrf, validation)
   testingPreds    <- predict(rangerrf, testing)
@@ -396,6 +425,7 @@ mlflow_start_run()
   mae <- MLmetrics::MAE(trainPreds$predictions,train_y)
   r2 <- MLmetrics::R2_Score(trainPreds$predictions,train_y)
   
+  #Logging metrics in MLFlow for training
   mlflow_log_metric("rmse-Train", rmse)
   mlflow_log_metric("r2-Train", r2)
   mlflow_log_metric("mae-Train", mae)
@@ -404,6 +434,8 @@ mlflow_start_run()
   rmse <- MLmetrics::RMSE(validationPreds$predictions,validation_y)
   mae <- MLmetrics::MAE(validationPreds$predictions,validation_y)
   r2 <- MLmetrics::R2_Score(validationPreds$predictions,validation_y)
+
+   #Logging metrics in MLFlow for validation
   mlflow_log_metric("rmse-Validation", rmse)
   mlflow_log_metric("r2-Validation", r2)
   mlflow_log_metric("mae-Validation", mae)
@@ -417,6 +449,8 @@ mlflow_start_run()
   rmse <- MLmetrics::RMSE(testingPreds$predictions,test_y)
   mae <- MLmetrics::MAE(testingPreds$predictions,test_y)
   r2 <- MLmetrics::R2_Score(testingPreds$predictions,test_y)
+
+ #Logging metrics in MLFlow for testing
   mlflow_log_metric("rmse-testing", rmse)
   mlflow_log_metric("r2-testing", r2)
   mlflow_log_metric("mae-testing", mae)
@@ -445,9 +479,12 @@ mlflow_start_run()
   mlflow_log_param("lambda", lambda)
   mlflow_log_param("name", "glmnet-mgaussian")
   mlflow_log_param("features_p", features)
+
+  #Creating and training glmnet model
   model <- glmnet(train_x, train_y, alpha = alpha, lambda = lambda, family= "mgaussian", standardize = FALSE)
   predictor <- crate(~ glmnet::predict.glmnet(!!model, as.matrix(.x)), !!model)
   
+  #making predictions using the glmnet model
   testingPreds <- predictor(test_x)
   validationPreds <- predictor(validation_x)
   trainPreds    <- predictor(train_x)
@@ -457,6 +494,8 @@ mlflow_start_run()
   mae <- MLmetrics::MAE(testingPreds,test_y)
   r2 <- MLmetrics::R2_Score(testingPreds,test_y)
   
+  
+ #Logging metrics in MLFlow for testing
   mlflow_log_metric("rmse-testing", rmse)
   mlflow_log_metric("r2-testing", r2)
   mlflow_log_metric("mae-testing", mae)
@@ -466,6 +505,8 @@ mlflow_start_run()
   mae <- MLmetrics::MAE(trainPreds,train_y)
   r2 <- MLmetrics::R2_Score(trainPreds,train_y)
   
+  
+ #Logging metrics in MLFlow for training
   mlflow_log_metric("rmse-Train", rmse)
   mlflow_log_metric("r2-Train", r2)
   mlflow_log_metric("mae-Train", mae)
@@ -475,6 +516,8 @@ mlflow_start_run()
   mae <- MLmetrics::MAE(validationPreds,validation_y)
   r2 <- MLmetrics::R2_Score(validationPreds,validation_y)
   
+  
+ #Logging metrics in MLFlow for validation
   mlflow_log_metric("rmse-Validation", rmse)
   mlflow_log_metric("r2-Validation", r2)
   mlflow_log_metric("mae-Validation", mae)
