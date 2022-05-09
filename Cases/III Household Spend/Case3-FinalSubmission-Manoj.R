@@ -1,6 +1,11 @@
-#' Case III Scaffold
-#' Ted Kwartler
-#' Apr 11 2022
+# Case-III Bed Bath and Yonder - CSCI E-96 - Data Mining for Business
+# 
+# Project Purpose: Building a predicted model for predicting Household spend (yHat) based on the data files available 
+# Provide data insights
+# Filename : Case-3-FinalSubmission-Manoj.R
+# This R script is solely for using h2o package, and has 3 sections. 
+#
+# Student name : Manoj Sharma
 
 # Options & Set up
 setwd("~/Users/manoj/Harvard Courses/Harvard_DataMining_Business_Student/Cases/III Household Spend/studentTables")
@@ -41,7 +46,12 @@ testingTables <- join_all(testingTables, by = 'tmpID')
 prospectTables <- lapply(prospects, read.csv)
 prospectTables <- join_all(prospectTables, by = 'tmpID')
 
-## Sample
+
+########################################-SAMPLE-#################################################################
+## Sample is the first phase of SEMMA approach
+##
+########################################-SAMPLE-#################################################################
+
 #setting the seed as 1234 for reproducability
 set.seed(1234) 
 #creating a split of Training data into 2 sections, A and B, in order to train and validate the results
@@ -71,6 +81,10 @@ plot_missing(trainingNA)
 
 
 #####
+########################################-EXPLORE-#################################################################
+## EXPLORE is the 2ND phase of SEMMA approach in which data is explored
+##
+########################################-EXPLORE-#################################################################
 
 ## Explore -- do more exploration 
 names(trainingTablesSectionA)
