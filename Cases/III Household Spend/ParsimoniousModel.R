@@ -597,7 +597,11 @@ mlflow_end_run()
 # }
 
 #mlflow_ui()
-
+########################################-ASSESS-#################################################################
+## ASSESS is the 5TH and final phase of SEMMA approach in which  assessment of models is performed
+## As I stated in the presentation, ranger function produced best performing model
+##  
+########################################-ASSESS-#################################################################
 # Make predictions on the prospect file using the the optimized Random Forest model
 prospectsPreds  <- predict(rangerrf, prospects)
 prospectPreds<-cbind(prospectTables,PredictedyHat=prospectPreds$predictions)
