@@ -3,7 +3,9 @@
 #' Apr 11 2022
 
 # Options & Set up
-setwd("~/Users/manoj/Harvard Courses/Harvard_DataMining_Business_Student/Cases/III Household Spend/studentTables")
+#setwd("~/Users/manoj/Harvard Courses/Harvard_DataMining_Business_Student/Cases/III Household Spend/studentTables")
+setwd("c:/Users/manoj/Harvard Courses/Harvard_DataMining_Business_Student/Cases/III Household Spend/studentTables")
+
 options(scipen=999)
 
 # Libraries
@@ -170,7 +172,7 @@ validation_y <- validation[, "yHat"]
 
 
 mlf_experiment_id = mlflow_set_experiment(
-  experiment_name = "Case-III Run May5#2"
+  experiment_name = "Case-III Run May6"
 )
 
 
