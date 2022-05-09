@@ -4,6 +4,7 @@
 
 # Options & Set up
 setwd("~/Users/manoj/Harvard Courses/Harvard_DataMining_Business_Student/Cases/III Household Spend/studentTables")
+
 options(scipen=999)
 
 # Libraries
@@ -16,11 +17,15 @@ library(ranger)
 library(caret)
 library(mlflow)
 library(readr)
+library(ggpubr)
 library(dplyr)
 library(caretEnsemble)
 library(skimr)
 library(igraph)
 library(DataExplorer)
+library(car)
+library(glmnet)
+library(carrier)
 
 
 
@@ -75,11 +80,65 @@ plot_missing(trainingNA)
 ## Explore -- do more exploration 
 names(trainingTablesSectionA)
 head(trainingTablesSectionA)
-barplot(table(trainingTablesSectionA$NetWorth), las = 2)
+
+#plotting yHat distribution in training and test sets
+hist(trainingTables$yHat,
+     main="Distribution of yHat in training set",
+     xlab="Household revenue",
+      col="darkmagenta",
+     freq=TRUE
+)
+hist(testingTables$yHat,
+     main="Distribution of yHat in testing set",
+     xlab="Household revenue",
+     col="green",
+     freq=TRUE
+)
+
+# yHat with Age on training dataset
+ggplot(trainingTables, aes(Age, yHat)) +
+  geom_jitter(size = 0.5, width = 0.5)
+
+# yHat with Age on training dataset
+ggplot(testingTables, aes(Age, yHat)) +
+  geom_jitter(size = 0.5, width = 0.5)
+
+
+ggscatterhist(
+  trainingTables[!(trainingTables$Gender==""),], x = "storeVisitFrequency", y = "yHat",
+  color = "Gender", size = 3, alpha = 0.6,
+  palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+  margin.params = list(fill = "Gender", color = "black", size = 0.2)
+)
+
+
+ggscatterhist(
+  testingTables, x = "storeVisitFrequency", y = "yHat",
+  color = "Gender", size = 3, alpha = 0.6,
+  palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+  margin.params = list(fill = "Gender", color = "black", size = 0.2)
+)
+
+ggscatterhist(
+  trainingTables[!(trainingTables$Gender==""),], x = "ISPSA", y = "yHat",
+  color = "Gender", size = 3, alpha = 0.6,
+  palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+  margin.plot = "boxplot",
+  ggtheme = theme_bw()
+)
+
+#Household spend by Gender
+ggplot(trainingTables[!(trainingTables$ResidenceHHGenderDescription==""),], aes(ResidenceHHGenderDescription, yHat)) +
+  geom_boxplot()
+
+#Household spend by Education
+ggplot(trainingTables[!(trainingTables$Education==""),], aes(Education, yHat)) +
+  geom_boxplot()
 
 ## Modify 
 # Choose which variables are ethical to use, and others which may not be useful; here I just chose 5 variables
-#adding a cardinal variable for bookbuyer
+
+#adding a ordinal variable for bookbuyer
 #training
 trainingTablesSectionA$bookbuyerlevel <- gsub(' book purchase in home', '', trainingTablesSectionA$BookBuyerInHome)
 trainingTablesSectionA$bookbuyerlevel <- gsub('book purchases in home', '', trainingTablesSectionA$bookbuyerlevel)
@@ -96,73 +155,166 @@ testingTables$bookbuyerlevel <- gsub('book purchases in home', '', testingTables
 testingTables$bookbuyerlevel[testingTables$bookbuyerlevel == ""] <- "0"
 testingTables$bookbuyerlevel<-as.numeric(testingTables$bookbuyerlevel)
 #Prospect
-
 prospectTables$bookbuyerlevel <- gsub(' book purchase in home', '', prospectTables$BookBuyerInHome)
 prospectTables$bookbuyerlevel <- gsub('book purchases in home', '', prospectTables$bookbuyerlevel)
 prospectTables$bookbuyerlevel[prospectTables$bookbuyerlevel == ""] <- "0"
 prospectTables$bookbuyerlevel<-as.numeric(prospectTables$bookbuyerlevel)
-
+#converting the bookbuyerlevel as a numeric
 trainingTablesSectionA$bookbuyerlevel<-as.numeric(trainingTablesSectionA$bookbuyerlevel)
 
-myname<-"manoj"
+#adding a ordinal variable for networth
+# trainingTablesSectionA$NWlevel <- sapply(trainingTablesSectionA$NetWorth, switch, 
+#                   '$1-4999' = 1, 
+#                   '$5000-9999' = 2, 
+#                   '$10000-24999'=3,
+#                   '$25000-49999'=4,
+#                   '$50000-99999'=5,
+#                   '$100000-249999'=6,
+#                   '$250000-499999'=7,
+#                   '$499999+'=8,6)
 
-features<-c('PartiesDescription','storeVisitFrequency','state',
-                                       'city',
-                                       'county',
+trainingTablesSectionA$EDlevel <- sapply(trainingTablesSectionA$Education, switch,
+                  'Unknown' = 3,
+                  'Less than HS Diploma - Likely' = 1,
+                  'HS Diploma - Likely' = 2,
+                  'HS Diploma - Extremely Likely' = 3,
+                  'Vocational Technical Degree - Extremely Likely' = 4,
+                  'Some College - Likely'=5,
+                  'Some College -Extremely Likely'=6,
+                  'Bach Degree - Likely'=7,
+                  'Bach Degree - Extremely Likely'=8,
+                  'Grad Degree - Likely'=9,
+                  'Grad Degree - Extremely Likely'=10,5)
+trainingTablesSectionA$EDlevel<-as.numeric(trainingTablesSectionA$EDlevel)
+
+trainingTablesSectionB$EDlevel <- sapply(trainingTablesSectionB$Education, switch,
+                                         'Unknown' = 3,
+                                         'Less than HS Diploma - Likely' = 1,
+                                         'HS Diploma - Likely' = 2,
+                                         'HS Diploma - Extremely Likely' = 3,
+                                         'Vocational Technical Degree - Extremely Likely' = 4,
+                                         'Some College - Likely'=5,
+                                         'Some College -Extremely Likely'=6,
+                                         'Bach Degree - Likely'=7,
+                                         'Bach Degree - Extremely Likely'=8,
+                                         'Grad Degree - Likely'=9,
+                                         'Grad Degree - Extremely Likely'=10,5)
+trainingTablesSectionB$EDlevel<-as.numeric(trainingTablesSectionB$EDlevel)
+testingTables$EDlevel <- sapply(testingTables$Education, switch,
+                                         'Unknown' = 3,
+                                         'Less than HS Diploma - Likely' = 1,
+                                         'HS Diploma - Likely' = 2,
+                                         'HS Diploma - Extremely Likely' = 3,
+                                         'Vocational Technical Degree - Extremely Likely' = 4,
+                                         'Some College - Likely'=5,
+                                         'Some College -Extremely Likely'=6,
+                                         'Bach Degree - Likely'=7,
+                                         'Bach Degree - Extremely Likely'=8,
+                                         'Grad Degree - Likely'=9,
+                                         'Grad Degree - Extremely Likely'=10,5)
+testingTables$EDlevel<-as.numeric(testingTables$EDlevel)
+prospectTables$EDlevel <- sapply(prospectTables$Education, switch,
+                                'Unknown' = 3,
+                                'Less than HS Diploma - Likely' = 1,
+                                'HS Diploma - Likely' = 2,
+                                'HS Diploma - Extremely Likely' = 3,
+                                'Vocational Technical Degree - Extremely Likely' = 4,
+                                'Some College - Likely'=5,
+                                'Some College -Extremely Likely'=6,
+                                'Bach Degree - Likely'=7,
+                                'Bach Degree - Extremely Likely'=8,
+                                'Grad Degree - Likely'=9,
+                                'Grad Degree - Extremely Likely'=10,5)
+prospectTables$EDlevel<-as.numeric(prospectTables$EDlevel)
+
+#creating 3 variables with feature lists. one with fewest, one with some more (<80% missing), and one with most features
+#this is in order to find out the best model, with fewest set of features
+most_features<-c('PartiesDescription','storeVisitFrequency',
+            'ResidenceHHGenderDescription',
+            'Gender',
+            'Age',
+            'EstHomeValue',
+            'MedianEducationYears',
+            'ISPSA',
+            'PropertyType',
+            'HomeOwnerRenter',
+            'BroadEthnicGroupings',
+            'EthnicDescription',
+            'PresenceOfChildrenCode',
+            'DwellingUnitSize',
+            'Education',
+            'NetWorth',
+            'ComputerOwnerInHome',
+            'LandValue',
+            'ReligionsDescription',
+            'DonatesToCharityInHome',
+            'Investor',
+            'OccupationIndustry',
+            'bookbuyerlevel',
+            'DonatestoLocalCommunity',
+            'HealthFitnessMagazineInHome',
+            'GeneralCollectorInHousehold',
+            'PoliticalContributerInHome',
+            'FamilyMagazineInHome',
+            'DonatestoHealthcare1',
+            'InterestinCurrentAffairsPoliticsInHousehold',
+            'MosaicZ4',
+            'BuyerofArtinHousehold',
+            'GunOwner',
+            'HomeOffice',
+            'OtherPetOwner',
+            'DogOwner',
+            'FinancialMagazineInHome',
+            'ReligiousContributorInHome',
+            'DonatestoWildlifePreservation',
+            'DoItYourselfMagazineInHome',
+            'CatOwner',
+            'LikelyUnionMember',
+            'DonatestoChildrensCauses',
+            'GardeningMagazineInHome',
+            'DonatestoAnimalWelfare',
+            'DonatesEnvironmentCauseInHome',
+            'FemaleOrientedMagazineInHome',
+            'Veteran',
+            'CulinaryInterestMagazineInHome',
+            'DonatestoVeteransCauses',
+            'UpscaleBuyerInHome',
+            'BusinessOwner',
+            'HorseOwner',
+            'overallsocialviews'
+)
+
+features_MP<-c('PartiesDescription','storeVisitFrequency',
                                        'ResidenceHHGenderDescription',
                                        'Gender',
                                        'Age',
                                        'EstHomeValue',
                                        'MedianEducationYears',
-                                       'ISPSA',
-                                       'PropertyType',
-                                       'HomeOwnerRenter',
-                                       'BroadEthnicGroupings',
-                                       'EthnicDescription',
-                                       'PresenceOfChildrenCode',
-                                       'DwellingUnitSize',
-                                       'Education',
-                                       'NetWorth',
-                                       'ComputerOwnerInHome',
-                                       'LandValue',
-                                       'ReligionsDescription',
-                                        'DonatesToCharityInHome',
-                                        'Investor',
-                                        'OccupationIndustry',
-                                        'bookbuyerlevel',
-                                        'DonatestoLocalCommunity',
-                                        'HealthFitnessMagazineInHome',
-                                        'GeneralCollectorInHousehold',
-                                        'PoliticalContributerInHome',
-                                        'FamilyMagazineInHome',
-                                        'DonatestoHealthcare1',
-                                        'InterestinCurrentAffairsPoliticsInHousehold',
-                                        'MosaicZ4',
-                                        'BuyerofArtinHousehold',
-                                        'GunOwner',
-                                        'HomeOffice',
-                                        'OtherPetOwner',
-                                        'DogOwner',
-                                        'FinancialMagazineInHome',
-                                        'ReligiousContributorInHome',
-                                        'DonatestoWildlifePreservation',
-                                        'DoItYourselfMagazineInHome',
-                                        'CatOwner',
-                                        'LikelyUnionMember',
-                                        'DonatestoChildrensCauses',
-                                        'GardeningMagazineInHome',
-                                        'DonatestoAnimalWelfare',
-                                        'DonatesEnvironmentCauseInHome',
-                                        'FemaleOrientedMagazineInHome',
-                                        'Veteran',
-                                        'CulinaryInterestMagazineInHome',
-                                        'DonatestoVeteransCauses',
-                                        'UpscaleBuyerInHome')
+                                       'ISPSA')
+
+features_MidP<-c('PartiesDescription','storeVisitFrequency',
+               'ResidenceHHGenderDescription',
+               'Gender',
+               'Age',
+               'EstHomeValue',
+               'MedianEducationYears',
+               'ISPSA',
+               'PropertyType',
+               'HomeOwnerRenter',
+               'BroadEthnicGroupings',
+               'EthnicDescription',
+               'PresenceOfChildrenCode',
+               'DwellingUnitSize',
+               'Education',
+               'NetWorth',
+               'ComputerOwnerInHome',
+               'LandValue',
+               'ReligionsDescription')
 #Iteration # 2, adding few more variables to see if it improves scores, earlier scores were from 92 to 112 (RMSE)
 
 
-informativeFeatures <- features
-features<-paste(features, collapse="|")
+informativeFeatures <- most_features
+features<-paste(most_features, collapse="|")
 
 
 plan  <- designTreatmentsN(trainingTablesSectionA, 
@@ -187,117 +339,229 @@ validation_x <- as.matrix(validation[, !(names(train) == "yHat")])
 validation_y <- validation[, "yHat"]
 
 
+
+
+# tgrid <- expand.grid(
+#   .mtry = 2:10,
+#   .min.node.size = c(10, 20,30),
+#   .splitrule = "variance"
+# 
+# )
+
+# model_caret <- train(yHat  ~ ., data = train,
+#                      method = "ranger",
+#                      trControl = trainControl(method="cv", number = 5, verboseIter = T, classProbs = F),
+#                      tuneGrid = tgrid,
+#                      num.trees = 500,
+#                      importance = "permutation")
+
+
+# varImp(model_caret)
+# 
+# plot(model_caret)
+# 
+# print(model_caret)
+# 
+# trainPreds      <- predict(model_caret, train)
+# validationPreds <- predict(model_caret, validation)
+# testingPreds    <- predict(model_caret, testing)
+# 
+# 
+# #checking the results only Validation data
+# rmse <- MLmetrics::RMSE(validationPreds,validation_y)
+# mae <- MLmetrics::MAE(validationPreds,validation_y)
+# r2 <- MLmetrics::R2_Score(validationPreds,validation_y)
+# message("Caret Tuned Model (mtry=", mtry, ", ntree=", ntrees,    "):")
+# message("  RMSE: ", rmse)
+# message("  MAE: ", mae)
+# message("  R2: ", r2)
 mtry=10
 ntrees = 500
-
-#Running RandomForest using Ranger and checking the results
-rangerrf <- ranger(yHat ~.,data = train, num.trees = ntrees, mtry = mtry)
-#print(predictorrf)
-trainPreds      <- predict(rangerrf, train)
-validationPreds <- predict(rangerrf, validation)
-testingPreds    <- predict(rangerrf, testing)
-
-rangerrf
-#checking the results only Validation data
-rmse <- MLmetrics::RMSE(validationPreds$predictions,validation_y)
-mae <- MLmetrics::MAE(validationPreds$predictions,validation_y)
-r2 <- MLmetrics::R2_Score(validationPreds$predictions,validation_y)
-message("Random Forest - Ranger - Validation (mtry=", mtry, ", ntree=", ntrees,    "):")
-message("  RMSE: ", rmse)
-message("  MAE: ", mae)
-message("  R2: ", r2)
-
-#checking the results for Testing data
-rmse <- MLmetrics::RMSE(testingPreds$predictions,test_y)
-mae <- MLmetrics::MAE(testingPreds$predictions,test_y)
-r2 <- MLmetrics::R2_Score(testingPreds$predictions,test_y)
-message("Random Forest - Ranger - Testing (mtry=", mtry, ", ntree=", ntrees,    "):")
-message("  RMSE: ", rmse)
-message("  MAE: ", mae)
-message("  R2: ", r2)
-
-
 mlf_experiment_id = mlflow_set_experiment(
-  experiment_name = "Ranger-loop3"
+  experiment_name = "Parsimonious model-MostFeatures"
 )
+
+
+mlflow_start_run() 
+  #Running RandomForest using Ranger and checking the results
+  rangerrf <- ranger(yHat ~.,data = train, num.trees = ntrees, mtry = mtry)
+  #print(predictorrf)
+  trainPreds      <- predict(rangerrf, train)
+  validationPreds <- predict(rangerrf, validation)
+  testingPreds    <- predict(rangerrf, testing)
+
+  #rangerrf
+  #Evaluating performance on training data
+  rmse <- MLmetrics::RMSE(trainPreds$predictions,train_y)
+  mae <- MLmetrics::MAE(trainPreds$predictions,train_y)
+  r2 <- MLmetrics::R2_Score(trainPreds$predictions,train_y)
+  
+  mlflow_log_metric("rmse-Train", rmse)
+  mlflow_log_metric("r2-Train", r2)
+  mlflow_log_metric("mae-Train", mae)
+  
+  #checking the results on Validation data
+  rmse <- MLmetrics::RMSE(validationPreds$predictions,validation_y)
+  mae <- MLmetrics::MAE(validationPreds$predictions,validation_y)
+  r2 <- MLmetrics::R2_Score(validationPreds$predictions,validation_y)
+  mlflow_log_metric("rmse-Validation", rmse)
+  mlflow_log_metric("r2-Validation", r2)
+  mlflow_log_metric("mae-Validation", mae)
+  
+  # message("Random Forest - Ranger - Validation (mtry=", mtry, ", ntree=", ntrees,    "):")
+  # message("  RMSE: ", rmse)
+  # message("  MAE: ", mae)
+  # message("  R2: ", r2)
+  
+  #checking the results for Testing data
+  rmse <- MLmetrics::RMSE(testingPreds$predictions,test_y)
+  mae <- MLmetrics::MAE(testingPreds$predictions,test_y)
+  r2 <- MLmetrics::R2_Score(testingPreds$predictions,test_y)
+  mlflow_log_metric("rmse-testing", rmse)
+  mlflow_log_metric("r2-testing", r2)
+  mlflow_log_metric("mae-testing", mae)
+  
+  message("Random Forest - Ranger - Testing (mtry=", mtry, ", ntree=", ntrees,    "):")
+  message("  RMSE: ", rmse)
+  message("  MAE: ", mae)
+  message("  R2: ", r2)
+
+mlflow_end_run()
+
+
 
 
 #setting default values for the MLFlow Parameters
 features_p <- mlflow_param("features", features, "string")
-mtry <- mlflow_param("mtry", 3, "numeric")
-ntree <- mlflow_param("ntree", 3, "numeric")
-maxnodes<- mlflow_param("maxnodes", 4, "numeric")
+alpha <- mlflow_param("alpha", 0.15, "numeric")
+lambda <- mlflow_param("lambda", 0.45, "numeric")
+run_name<-mlflow_param("name","model_name","string")
 
 
+mlflow_start_run() 
+
+  #######################################################test###########################
+  mlflow_log_param("alpha", alpha)
+  mlflow_log_param("lambda", lambda)
+  mlflow_log_param("name", "glmnet-mgaussian")
+  mlflow_log_param("features_p", features)
+  model <- glmnet(train_x, train_y, alpha = alpha, lambda = lambda, family= "mgaussian", standardize = FALSE)
+  predictor <- crate(~ glmnet::predict.glmnet(!!model, as.matrix(.x)), !!model)
+  
+  testingPreds <- predictor(test_x)
+  validationPreds <- predictor(validation_x)
+  trainPreds    <- predictor(train_x)
+  
+  #Evaluating performance on testing data
+  rmse <- MLmetrics::RMSE(testingPreds,test_y)
+  mae <- MLmetrics::MAE(testingPreds,test_y)
+  r2 <- MLmetrics::R2_Score(testingPreds,test_y)
+  
+  mlflow_log_metric("rmse-testing", rmse)
+  mlflow_log_metric("r2-testing", r2)
+  mlflow_log_metric("mae-testing", mae)
+  
+  #Evaluating performance on training data
+  rmse <- MLmetrics::RMSE(trainPreds,train_y)
+  mae <- MLmetrics::MAE(trainPreds,train_y)
+  r2 <- MLmetrics::R2_Score(trainPreds,train_y)
+  
+  mlflow_log_metric("rmse-Train", rmse)
+  mlflow_log_metric("r2-Train", r2)
+  mlflow_log_metric("mae-Train", mae)
+  
+  #Evaluating performance on validation data
+  rmse <- MLmetrics::RMSE(validationPreds,validation_y)
+  mae <- MLmetrics::MAE(validationPreds,validation_y)
+  r2 <- MLmetrics::R2_Score(validationPreds,validation_y)
+  
+  mlflow_log_metric("rmse-Validation", rmse)
+  mlflow_log_metric("r2-Validation", r2)
+  mlflow_log_metric("mae-Validation", mae)
+  
+  message("Elasticnet model (alpha=", alpha, ", lambda=", lambda, "):")
+  message("  RMSE: ", rmse)
+  message("  MAE: ", mae)
+  message("  R2: ", r2)
+  
+  mlflow_log_model(predictor, "model")
+mlflow_end_run()
 
 
+#The following code was created to manually iterate through hypertuning parameters and logging each iteration
+#using MLFlow, after running many such experiments, I found out that ntree=18 or 19 gave the best RMSE
+#with this dataset on Test
 
 #randomForest(yHat ~ ., data = train, mtry = mtry,ntree=ntree,maxnodes=maxnodes,
 #  importance = TRUE, na.action = na.omit, proximity=TRUE)
 
-#RandomForest
-for (mtry in 3:4) {
-  for (ntree in c(seq(from = 50, to = 600, by  = 200))){
-    for (maxnodes in 4:5){
-      mlflow_start_run()
-      mlflow_log_param("run_name", "randomforest")
-      mlflow_log_param("features_p", features)
-      mlflow_log_param("mtry", mtry)
-      mlflow_log_param("ntree", ntree)
-      mlflow_log_param("maxnodes", maxnodes)
-      
-      predictorrf <- ranger(yHat ~.,data = train, num.trees = ntree, mtry = mtry, maxnodes = maxnodes)
-      MLmetrics::RMSE(testingPreds$predictions,testing$yHat)
-      
-      #print(predictorrf)
-      trainPreds      <- predict(predictorrf, train)
-      validationPreds <- predict(predictorrf, validation)
-      testingPreds    <- predict(predictorrf, testing)
-      
-      #Evaluating performance on training  data
-      rmse <- MLmetrics::RMSE(trainPreds$predictions,train_y)
-      mae <- MLmetrics::MAE(trainPreds$predictions,train_y)
-      r2 <- MLmetrics::R2_Score(trainPreds$predictions,train_y)
-      
-      mlflow_log_metric("rmse-Train", rmse)
-      mlflow_log_metric("r2-Train", r2)
-      mlflow_log_metric("mae-Train", mae)
-      
-      #Evaluating performance on validation data
-      rmse <- MLmetrics::RMSE(validationPreds$predictions,validation_y)
-      mae <- MLmetrics::MAE(validationPreds$predictions,validation_y)
-      r2 <- MLmetrics::R2_Score(validationPreds$predictions,validation_y)
-      
-      mlflow_log_metric("rmse-Validation", rmse)
-      mlflow_log_metric("r2-Validation", r2)
-      mlflow_log_metric("mae-Validation", mae)
-      
-      #Evaluating performance on testing data
-      rmse <- MLmetrics::RMSE(testingPreds$predictions,test_y)
-      mae <- MLmetrics::MAE(testingPreds$predictions,test_y)
-      r2 <- MLmetrics::R2_Score(testingPreds$predictions,test_y)
-      
-      mlflow_log_metric("rmse-testing", rmse)
-      mlflow_log_metric("r2-testing", r2)
-      mlflow_log_metric("mae-testing", mae)
-      
-      message("Random Forest model (mtry=", mtry, ", ntree=", ntree,  "maxnodes = ", maxnodes , "):")
-      message("  RMSE: ", rmse)
-      message("  MAE: ", mae)
-      message("  R2: ", r2)
-      #######################################################test###########################
-      #mlflow_set_tracking_uri("http://localhost:5712")
-      mlflow_end_run()  
-      
-    }
-  }
-}
+#RandomForest - commeting this as it takes a long time to run. Final output after doing this gridsearch wasn't much encouraging either
+# for (mtry in 3:4) {
+#   for (ntree in c(seq(from = 50, to = 600, by  = 50))){
+#     for (maxnodes in 2:5){
+#       mlflow_start_run()
+#       mlflow_log_param("run_name", "randomforest")
+#       mlflow_log_param("features_p", features)
+#       mlflow_log_param("mtry", mtry)
+#       mlflow_log_param("ntree", ntree)
+#       mlflow_log_param("maxnodes", maxnodes)
+#       
+#       predictorrf <- ranger(yHat ~.,data = train, num.trees = ntree, mtry = mtry, maxnodes = maxnodes)
+#       MLmetrics::RMSE(testingPreds$predictions,testing$yHat)
+#       
+#       #print(predictorrf)
+#       trainPreds      <- predict(predictorrf, train)
+#       validationPreds <- predict(predictorrf, validation)
+#       testingPreds    <- predict(predictorrf, testing)
+#       
+#       #Evaluating performance on training  data
+#       rmse <- MLmetrics::RMSE(trainPreds$predictions,train_y)
+#       mae <- MLmetrics::MAE(trainPreds$predictions,train_y)
+#       r2 <- MLmetrics::R2_Score(trainPreds$predictions,train_y)
+#       
+#       mlflow_log_metric("rmse-Train", rmse)
+#       mlflow_log_metric("r2-Train", r2)
+#       mlflow_log_metric("mae-Train", mae)
+#       
+#       #Evaluating performance on validation data
+#       rmse <- MLmetrics::RMSE(validationPreds$predictions,validation_y)
+#       mae <- MLmetrics::MAE(validationPreds$predictions,validation_y)
+#       r2 <- MLmetrics::R2_Score(validationPreds$predictions,validation_y)
+#       
+#       mlflow_log_metric("rmse-Validation", rmse)
+#       mlflow_log_metric("r2-Validation", r2)
+#       mlflow_log_metric("mae-Validation", mae)
+#       
+#       #Evaluating performance on testing data
+#       rmse <- MLmetrics::RMSE(testingPreds$predictions,test_y)
+#       mae <- MLmetrics::MAE(testingPreds$predictions,test_y)
+#       r2 <- MLmetrics::R2_Score(testingPreds$predictions,test_y)
+#       
+#       mlflow_log_metric("rmse-testing", rmse)
+#       mlflow_log_metric("r2-testing", r2)
+#       mlflow_log_metric("mae-testing", mae)
+#       
+#       message("Random Forest model (mtry=", mtry, ", ntree=", ntree,  "maxnodes = ", maxnodes , "):")
+#       message("  RMSE: ", rmse)
+#       message("  MAE: ", mae)
+#       message("  R2: ", r2)
+#       #######################################################test###########################
+#       #mlflow_set_tracking_uri("http://localhost:5712")
+#       mlflow_end_run()  
+#       
+#     }
+#   }
+# }
 
 #mlflow_ui()
 
-# Make predictions on the prospect file
-#prospectsPreds  <- predict(fitLM, prospects)
-#write.csv(prospectsPreds, 'prospectPredictionFile.csv', row.names = F)
+# Make predictions on the prospect file using the the optimized Random Forest model
+prospectsPreds  <- predict(rangerrf, prospects)
+prospectPreds<-cbind(prospectTables,PredictedyHat=prospectPreds$predictions)
+  
+# Creating the CSV of the Prospects
+write.csv(prospectPreds, 'prospectPredictionFile.csv')
+
 
 
 # End

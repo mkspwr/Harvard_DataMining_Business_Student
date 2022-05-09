@@ -1,69 +1,67 @@
-library(caret)
-library(skimr)
-skimmed <- skim(trainingTables)
-skimmed[, c(1:5, 9:11, 13, 15:16)]
-
-subsets <- c(1:5, 10, 15, 18)
-
-ctrl <- rfeControl(functions = rfFuncs,
-                   method = "repeatedcv",
-                   repeats = 5,
-                   verbose = FALSE)
-
-lmProfile <- rfe(x=train_x, y=train_y,
-                 sizes = subsets,
-                 rfeControl = ctrl)
-
-lmProfile
-
-
-modelnames <- paste(names(getModelInfo()), collapse=',  ')
-modelnames
-
-set.seed(100)
-
-# Train the model using randomForest and predict on the training data itself.
-model_mars = train(train_y ~ ., data=train, method='earth')
-fitted <- predict(model_mars)
-model_mars
-
-plot(model_mars, main="Model Accuracies with MARS")
-
-varimp_mars <- varImp(model_mars)
-plot(varimp_mars, main="Variable Importance with MARS")
-
-
 library(caretEnsemble)
+trainControl <- trainControl(method = "repeatedcv",
+                             number = 5,
+                             index = createFolds(train$yHat, 5),
+                             repeats = 3,
+                             savePredictions = "all",
+                             #classProbs=TRUE,
+                             search = "random")
+tgrid <- expand.grid(
+  .mtry = c(seq(from = 33, to = 39, by =2)),
+  .min.node.size = c(7, 11),
+  .splitrule = "variance"
+)
+models <- caretList(
+  yHat ~ .,data  = train,
+  trControl=trainControl,
+  metric="RMSE",
+  methodList=c('ranger', 'gbm'),
+  tuneList=list(
+    rf1=caretModelSpec(method="rpart", 
+                       tuneGrid = expand.grid(cp = c(0.0001, 0.0005)) ),
+    rf2=caretModelSpec(method="ranger",
+                       tuneGrid = tgrid,
+                       num.trees = 300,
+                       importance = "permutation"),
+    gbm=caretModelSpec(method="gbm",
+                       tuneGrid = expand.grid(interaction.depth = c(1, 3, 6, 9, 10),
+                                              n.trees = (0:50)*50, 
+                                              shrinkage = seq(.0005, .05,.0005),
+                                              n.minobsinnode = 10),
+                       num.trees = 300,
+                       importance = "permutation"),
+    nn=caretModelSpec(method="ctree2", 
+                      tuneGrid = expand.grid(maxdepth = c(20:30), mincriterion = c(seq(from = 0.5, to = .99, by =0.1)))
+    )
+  )
+)
 
-# Stacking Algorithms - Run multiple algos in one call.
-trainControl <- trainControl(method="repeatedcv", 
-                             number=10, 
-                             repeats=3,
-                             savePredictions=TRUE)
+#models <- caretList(yHat ~ .,data  = train,methodList=c('rpart','ranger', 'ctree2'),trControl=trainControl)
+model <- caretEnsemble(models, metric="RMSE", trControl=trainControl)
+summary(model)
 
-algorithmList <- c('rf', 'adaboost', 'earth', 'xgbDART', 'svmRadial','gbm','glmboost')
+trainPreds      <- predict(model, train)
+validationPreds <- predict(model, validation)
+testingPreds    <- predict(model, testing)
 
-set.seed(100)
-models <- caretList(train_y ~ ., data=train, trControl=trainControl, methodList=algorithmList) 
-results <- resamples(models)
-summary(results)
+#checking the results for Testing data
+rmse <- MLmetrics::RMSE(testingPreds,test_y)
+mae <- MLmetrics::MAE(testingPreds,test_y)
+r2 <- MLmetrics::R2_Score(testingPreds,test_y)
+message("Random Forest - Ranger - Testing (mtry=", mtry, ", ntree=", ntrees,    "):")
+message("  RMSE: ", rmse)
+message("  MAE: ", mae)
+message("  R2: ", r2)
 
-scales <- list(x=list(relation="free"), y=list(relation="free"))
-bwplot(results, scales=scales)
+caretModelList<-modelLookup()
 
+varImp(model)
 
+plot(model)
 
+print(model)
 
-# Create the trainControl
-set.seed(101)
-stackControl <- trainControl(method="repeatedcv", 
-                             number=10, 
-                             repeats=3,
-                             savePredictions=TRUE, 
-                             classProbs=TRUE)
+caretModelList<-modelLookup()
 
-# Ensemble the predictions of `models` to form a new combined prediction based on glm
-stack.glm <- caretStack(models, method="glm", metric="Accuracy", trControl=stackControl)
-print(stack.glm)
-
+print(caretModelList[caretModelList$forReg==TRUE,])
 

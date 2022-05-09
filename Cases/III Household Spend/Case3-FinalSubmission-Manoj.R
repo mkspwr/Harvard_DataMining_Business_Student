@@ -21,6 +21,8 @@ library(caretEnsemble)
 library(skimr)
 library(igraph)
 library(DataExplorer)
+library(ggcorrplot)
+
 
 
 
@@ -61,8 +63,6 @@ trainingNA[trainingNA == "Cannot Determine"] <- NA
 # Replace blank by NA
 plot_missing(trainingNA)
 
-dfmissing<-colSums(is.na(trainingNA))
-
 #looking at count of mising values and using this to eliminate variables which have most values missing
 #for eg - DonatestoLiberalCauses - 14921 out of 15000 are empty
 
@@ -77,12 +77,108 @@ names(trainingTablesSectionA)
 head(trainingTablesSectionA)
 barplot(table(trainingTablesSectionA$NetWorth), las = 2)
 
+ggplot(data = trainingTablesSectionA, mapping = aes(x=yHat))+
+  geom_col()
+
 ## Modify 
 # Choose which variables are ethical to use, and others which may not be useful; here I just chose 5 variables
+trainingTablesSectionA$EstHomeValue<-as.numeric(parse_number(trainingTablesSectionA$EstHomeValue))
+trainingTablesSectionA$HomePurchasePrice<-as.numeric(parse_number(trainingTablesSectionA$HomePurchasePrice))
+trainingTablesSectionA$LandValue<-as.numeric(parse_number(trainingTablesSectionA$LandValue))
 
-myname<-"manoj"
+trainingTablesSectionB$EstHomeValue<-as.numeric(parse_number(trainingTablesSectionB$EstHomeValue))
+trainingTablesSectionB$HomePurchasePrice<-as.numeric(parse_number(trainingTablesSectionB$HomePurchasePrice))
+trainingTablesSectionB$LandValue<-as.numeric(parse_number(trainingTablesSectionB$LandValue))
 
-features<-names(trainingTablesSectionA[c(2:40,43:44,53:58,60:80)])
+testingTables$EstHomeValue<-as.numeric(parse_number(testingTables$EstHomeValue))
+testingTables$HomePurchasePrice<-as.numeric(parse_number(testingTables$HomePurchasePrice))
+testingTables$LandValue<-as.numeric(parse_number(testingTables$LandValue))
+
+prospectTables$EstHomeValue<-as.numeric(parse_number(prospectTables$EstHomeValue))
+prospectTables$HomePurchasePrice<-as.numeric(parse_number(prospectTables$HomePurchasePrice))
+prospectTables$LandValue<-as.numeric(parse_number(prospectTables$LandValue))
+
+#adding a ordinal variable for bookbuyer
+#training
+trainingTablesSectionA$bookbuyerlevel <- gsub(' book purchase in home', '', trainingTablesSectionA$BookBuyerInHome)
+trainingTablesSectionA$bookbuyerlevel <- gsub('book purchases in home', '', trainingTablesSectionA$bookbuyerlevel)
+trainingTablesSectionA$bookbuyerlevel[trainingTablesSectionA$bookbuyerlevel == ""] <- "0"
+trainingTablesSectionA$bookbuyerlevel<-as.numeric(trainingTablesSectionA$bookbuyerlevel)
+#validation
+trainingTablesSectionB$bookbuyerlevel <- gsub(' book purchase in home', '', trainingTablesSectionB$BookBuyerInHome)
+trainingTablesSectionB$bookbuyerlevel <- gsub('book purchases in home', '', trainingTablesSectionB$bookbuyerlevel)
+trainingTablesSectionB$bookbuyerlevel[trainingTablesSectionB$bookbuyerlevel == ""] <- "0"
+trainingTablesSectionB$bookbuyerlevel<-as.numeric(trainingTablesSectionB$bookbuyerlevel)
+#testing
+testingTables$bookbuyerlevel <- gsub(' book purchase in home', '', testingTables$BookBuyerInHome)
+testingTables$bookbuyerlevel <- gsub('book purchases in home', '', testingTables$bookbuyerlevel)
+testingTables$bookbuyerlevel[testingTables$bookbuyerlevel == ""] <- "0"
+testingTables$bookbuyerlevel<-as.numeric(testingTables$bookbuyerlevel)
+#Prospect
+prospectTables$bookbuyerlevel <- gsub(' book purchase in home', '', prospectTables$BookBuyerInHome)
+prospectTables$bookbuyerlevel <- gsub('book purchases in home', '', prospectTables$bookbuyerlevel)
+prospectTables$bookbuyerlevel[prospectTables$bookbuyerlevel == ""] <- "0"
+prospectTables$bookbuyerlevel<-as.numeric(prospectTables$bookbuyerlevel)
+#converting the bookbuyerlevel as a numeric
+trainingTablesSectionA$bookbuyerlevel<-as.numeric(trainingTablesSectionA$bookbuyerlevel)
+
+pairs(trainingTablesSectionA[, c('ISPSA','MedianEducationYears','Age','storeVisitFrequency','EstHomeValue','LandValue','HomePurchasePrice','yHat')])
+
+#features<-names(trainingTablesSectionA[c(2:40,43:44,53:58,60:80)])
+features<-c('PartiesDescription','storeVisitFrequency',
+            'ResidenceHHGenderDescription',
+            'Gender',
+            'Age',
+            'EstHomeValue',
+            'MedianEducationYears',
+            'ISPSA',
+            'PropertyType',
+            'HomeOwnerRenter',
+            'BroadEthnicGroupings',
+            'EthnicDescription',
+            'PresenceOfChildrenCode',
+            'DwellingUnitSize',
+            'Education',
+            'NetWorth',
+            'ComputerOwnerInHome',
+            'LandValue',
+            'ReligionsDescription',
+            'DonatesToCharityInHome',
+            'Investor',
+            'OccupationIndustry',
+            'bookbuyerlevel',
+            'DonatestoLocalCommunity',
+            'HealthFitnessMagazineInHome',
+            'GeneralCollectorInHousehold',
+            'PoliticalContributerInHome',
+            'FamilyMagazineInHome',
+            'DonatestoHealthcare1',
+            'InterestinCurrentAffairsPoliticsInHousehold',
+            'MosaicZ4',
+            'BuyerofArtinHousehold',
+            'GunOwner',
+            'HomeOffice',
+            'OtherPetOwner',
+            'DogOwner',
+            'FinancialMagazineInHome',
+            'ReligiousContributorInHome',
+            'DonatestoWildlifePreservation',
+            'DoItYourselfMagazineInHome',
+            'CatOwner',
+            'LikelyUnionMember',
+            'DonatestoChildrensCauses',
+            'GardeningMagazineInHome',
+            'DonatestoAnimalWelfare',
+            'DonatesEnvironmentCauseInHome',
+            'FemaleOrientedMagazineInHome',
+            'Veteran',
+            'CulinaryInterestMagazineInHome',
+            'DonatestoVeteransCauses',
+            'UpscaleBuyerInHome',
+            'BusinessOwner',
+            'HorseOwner',
+            'overallsocialviews'
+)
 
 informativeFeatures <- features
 features<-paste(features, collapse="|")
@@ -110,20 +206,13 @@ validation_x <- as.matrix(validation[, !(names(train) == "yHat")])
 validation_y <- validation[, "yHat"]
 
 
-mlf_experiment_id = mlflow_set_experiment(
-  experiment_name = "RandomForest-loop2"
-)
 
 
+mtry=18
+ntree=260
+set.seed(1234)
+rangerrf <- ranger(yHat ~.,data = train, num.trees = ntree, mtry = mtry,min.node.size=8)
 
-features_p <- mlflow_param("features", features, "string")
-mtry <- mlflow_param("mtry", 3, "numeric")
-ntree <- mlflow_param("ntree", 3, "numeric")
-maxnodes<- mlflow_param("maxnodes", 4, "numeric")
-
-
-rangerrf <- ranger(yHat ~.,data = train, num.trees = 500, mtry = 3)
-MLmetrics::RMSE(testingPreds$predictions,testing$yHat)
 rangerrf
 
 #print(predictorrf)
@@ -131,38 +220,82 @@ trainPreds      <- predict(rangerrf, train)
 validationPreds <- predict(rangerrf, validation)
 testingPreds    <- predict(rangerrf, testing)
 
-
-
-rmse <- sqrt(mean((testingPreds - test_y) ^ 2))
-mae <- mean(abs(testingPreds - test_y))
-r2 <- as.numeric(cor(testingPreds, test_y) ^ 2)
-
-
-
-#randomForest(yHat ~ ., data = train, mtry = mtry,ntree=ntree,maxnodes=maxnodes,
-                          #  importance = TRUE, na.action = na.omit, proximity=TRUE)
+rmse <- MLmetrics::RMSE(testingPreds$predictions,testing$yHat)
+mae <- MLmetrics::MAE(testingPreds$predictions,testing$yHat)
+r2 <- MLmetrics::R2_Score(testingPreds$predictions,testing$yHat)
 
 
 
 
+rfrandomF <- randomForest(yHat ~ ., data = train, mtry = mtry,ntree=ntree,maxnodes=maxnodes,
+                            importance = TRUE, na.action = na.omit, proximity=TRUE)
+
+testingPreds<- predict(rfrandomF, testing)
+
+rmse <- MLmetrics::RMSE(testingPreds,testing$yHat)
+mae <- MLmetrics::MAE(testingPreds,testing$yHat)
+r2 <- MLmetrics::R2_Score(testingPreds,testing$yHat)
+#gridsearch using caret
+ptm <- proc.time()
+
+grid <-  expand.grid(mtry = c(3,4))
+
+fitControl <- trainControl(method = "CV",
+                           number = 5,
+                           verboseIter = TRUE)
+
+fit = train(
+  x = train_x,
+  y = train_y,
+  method = 'ranger',
+  num.trees = 200,
+  tuneGrid = grid,
+  trControl = fitControl
+)
+print(fit)
+print(proc.time() - ptm) # ~2.4 seconds
+
+#linear regression
+model <- glmnet(train_x, train_y, alpha = 0.35, lambda = 0.45, family= "gaussian", standardize = FALSE)
+
+predictor <- crate(~ glmnet::predict.glmnet(!!model, as.matrix(.x)), !!model)
+
+testingPreds <- predictor(test_x)
+validationPreds <- predictor(validation_x)
+trainPreds    <- predictor(train_x)
+#checking the results for Testing data
+rmse <- MLmetrics::RMSE(testingPreds,test_y)
+mae <- MLmetrics::MAE(testingPreds,test_y)
+r2 <- MLmetrics::R2_Score(testingPreds,test_y)
+
+mlf_experiment_id = mlflow_set_experiment(
+  experiment_name = "Rangerforloops3"
+)
+
+
+
+features_p <- mlflow_param("features", features, "string")
+mtry <- mlflow_param("mtry", 3, "numeric")
+ntree <- mlflow_param("ntree", 3, "numeric")
+minnodesize<- mlflow_param("minnodesize", 5, "numeric")
   #RandomForest
-  for (mtry in 3:4) {
-    for (ntree in c(seq(from = 50, to = 600, by  = 50))){
-      for (maxnodes in 4:18){
+  for (mtry in 15:20) {
+    for (ntree in c(seq(from = 240, to = 350, by  = 10))){
+      for (minnodesize in 7:10){
         mlflow_start_run()
         mlflow_log_param("run_name", "randomforest")
         mlflow_log_param("features_p", features)
         mlflow_log_param("mtry", mtry)
         mlflow_log_param("ntree", ntree)
-        mlflow_log_param("maxnodes", maxnodes)
+        mlflow_log_param("minnodesize", minnodesize)
         
-        rangerrf <- ranger(yHat ~.,data = train, num.trees = ntree, mtry = 3)
+        rangerrf <- ranger(yHat ~.,data = train, num.trees = ntree, mtry = mtry,min.node.size=minnodesize)
         MLmetrics::RMSE(testingPreds$predictions,testing$yHat)
         
         #print(predictorrf)
-        $trainPreds      <- predict(predictorrf, train)
-        $validationPreds <- predict(predictorrf, validation)
-        $testingPreds    <- predict(predictorrf, testing)
+        trainPreds      <- predict(rangerrf, train)
+        validationPreds <- predict(rangerrf, validation)
+        testingPreds    <- predict(rangerrf, testing)
         #Evaluating performance on training data
         rmse <- MLmetrics::RMSE(testingPreds$predictions,testing$yHat)
         mae <- MLmetrics::MAE(testingPreds$predictions,testing$yHat)
@@ -173,24 +306,24 @@ r2 <- as.numeric(cor(testingPreds, test_y) ^ 2)
         mlflow_log_metric("mae-Train", mae)
         
         #Evaluating performance on validation data
-        rmse <- sqrt(mean((validationPreds - validation_y) ^ 2))
-        mae <- mean(abs(validationPreds - validation_y))
-        r2 <- as.numeric(cor(validationPreds, validation_y) ^ 2)
+        rmse <- MLmetrics::RMSE(validationPreds$predictions,validation$yHat)
+        mae <- MLmetrics::MAE(validationPreds$predictions,validation$yHat)
+        r2 <- MLmetrics::R2_Score(validationPreds$predictions,validation$yHat)
         
         mlflow_log_metric("rmse-Validation", rmse)
         mlflow_log_metric("r2-Validation", r2)
         mlflow_log_metric("mae-Validation", mae)
         
         #Evaluating performance on testing data
-        rmse <- sqrt(mean((testingPreds - test_y) ^ 2))
-        mae <- mean(abs(testingPreds - test_y))
-        r2 <- as.numeric(cor(testingPreds, test_y) ^ 2)
+        rmse <- MLmetrics::RMSE(testingPreds$predictions,testing$yHat)
+        mae <- MLmetrics::MAE(testingPreds$predictions,testing$yHat)
+        r2 <- MLmetrics::R2_Score(testingPreds$predictions,testing$yHat)
         
         mlflow_log_metric("rmse-testing", rmse)
         mlflow_log_metric("r2-testing", r2)
         mlflow_log_metric("mae-testing", mae)
         
-        message("Random Forest model (mtry=", 3, ", importance=", "true", "):")
+        message("Random Forest model (mtry=", mtry, ", importance=", "true", "):")
         message("  RMSE: ", rmse)
         message("  MAE: ", mae)
         message("  R2: ", r2)
@@ -199,7 +332,6 @@ r2 <- as.numeric(cor(testingPreds, test_y) ^ 2)
         mlflow_end_run()      
       }
     }
-    
   }
   
 #mlflow_ui()
